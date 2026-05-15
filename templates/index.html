@@ -1,68 +1,216 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Healthcare AI</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>MediChat Assistant</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
 
-<div class="chat-container">
+<div class="app-container">
 
-    <h1>🩺 Healthcare Assistant</h1>
+    <!-- Sidebar -->
+    <div class="sidebar">
 
-    <div id="chat-box"></div>
+        <div class="logo">
+            <div class="logo-icon">🩺</div>
+            <h2>MediChat</h2>
+        </div>
 
-    <div class="input-area">
-        <input type="text" id="userInput" placeholder="Describe your symptoms...">
-        <button onclick="sendMessage()">Send</button>
+        <button class="new-chat-btn">
+            + New Consultation
+        </button>
+
+        <div class="topics">
+            <p class="topic-title">QUICK TOPICS</p>
+
+            <div class="topic">🤒 Fever & Cold</div>
+            <div class="topic">❤️ Chest & Heart</div>
+            <div class="topic">🦴 Joints & Bones</div>
+            <div class="topic">🧠 Mental Health</div>
+            <div class="topic">🤰 Pregnancy</div>
+        </div>
+
+        <div class="disclaimer-box">
+            <h4>⚠ Medical Disclaimer</h4>
+            <p>
+                This chatbot provides general health information only and is not a substitute for professional medical advice.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Main Chat -->
+    <div class="chat-container">
+
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="header-left">
+                <div class="header-avatar">🩺</div>
+
+                <div>
+                    <h3>MediChat Assistant</h3>
+                    <p>● Available now</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="chat-box" id="chat-box">
+
+            <!-- Welcome Message -->
+            <div class="message bot-message">
+
+                <div class="bot-avatar">🩺</div>
+
+                <div class="message-content">
+
+                    <div class="response-section">
+                        <h4>Hello! I'm your Health Assistant 👋</h4>
+
+                        <p>
+                            I can help with symptom checks, precautions,
+                            home remedies, and general medical guidance.
+                        </p>
+
+                        <p>
+                            How are you feeling today?
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+
+            <input
+                type="text"
+                id="user-input"
+                placeholder="Describe your symptoms or ask a health question..."
+            >
+
+            <button id="send-btn">
+                ➤
+            </button>
+
+        </div>
+
     </div>
 
 </div>
 
 <script>
 
+const sendBtn = document.getElementById("send-btn");
+const userInput = document.getElementById("user-input");
+const chatBox = document.getElementById("chat-box");
+
+sendBtn.addEventListener("click", sendMessage);
+
+userInput.addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        sendMessage();
+    }
+});
+
 async function sendMessage() {
 
-    let input = document.getElementById("userInput");
-    let message = input.value;
+    const message = userInput.value.trim();
 
-    if(message.trim() === "") return;
+    if (!message) return;
 
-    addMessage(message, "user");
+    // USER MESSAGE
+    chatBox.innerHTML += `
+        <div class="message user-message">
+            <div class="message-content user-bubble">
+                ${message}
+            </div>
+        </div>
+    `;
 
-    input.value = "";
+    userInput.value = "";
 
-    let response = await fetch("/chat", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            message: message
-        })
-    });
+    chatBox.scrollTop = chatBox.scrollHeight;
 
-    let data = await response.json();
+    // LOADING
+    chatBox.innerHTML += `
+        <div class="message bot-message" id="loading">
+            <div class="bot-avatar">🩺</div>
 
-    addMessage(data.response, "bot");
+            <div class="message-content">
+                <div class="typing">
+                    Typing...
+                </div>
+            </div>
+        </div>
+    `;
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+
+        const response = await fetch("/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: message
+            })
+        });
+
+        const data = await response.json();
+
+        document.getElementById("loading").remove();
+
+        chatBox.innerHTML += `
+            <div class="message bot-message">
+
+                <div class="bot-avatar">🩺</div>
+
+                <div class="message-content formatted-response">
+                    ${formatResponse(data.response)}
+                </div>
+
+            </div>
+        `;
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+    } catch (error) {
+
+        document.getElementById("loading").remove();
+
+        chatBox.innerHTML += `
+            <div class="message bot-message">
+                <div class="bot-avatar">🩺</div>
+
+                <div class="message-content error">
+                    Connection error. Please try again.
+                </div>
+            </div>
+        `;
+    }
 }
 
-function addMessage(text, sender) {
+function formatResponse(text) {
 
-    let box = document.getElementById("chat-box");
-
-    let div = document.createElement("div");
-
-    div.classList.add(sender);
-
-    div.innerText = text;
-
-    box.appendChild(div);
-
-    box.scrollTop = box.scrollHeight;
+    return text
+        .replace(/\n/g, "<br>")
+        .replace(/Possible Condition:/g, "<h3>🩺 Possible Condition</h3>")
+        .replace(/Precautions:/g, "<h3>💊 Precautions</h3>")
+        .replace(/Home Remedies & Care Tips:/g, "<h3>🧪 Home Remedies & Care Tips</h3>")
+        .replace(/When to See a Doctor Immediately:/g, "<h3>🚨 When to See a Doctor Immediately</h3>")
+        .replace(/Encouragement:/g, "<h3>💙 Encouragement</h3>")
+        .replace(/Disclaimer:/g, "<h3>⚠ Disclaimer</h3>");
 }
 
 </script>

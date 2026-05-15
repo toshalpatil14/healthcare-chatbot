@@ -1,6 +1,4 @@
 flask
-transformers
-torch
-sentencepiece
-accelerate
+openai
 gunicorn
+python-dotenv
